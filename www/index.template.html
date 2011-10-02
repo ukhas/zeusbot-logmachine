@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+  <head>
+    <title>zeusbot</title>
+    <link href="{{ stylesheet }}" rel="stylesheet" type="text/css" />
+    <script type="text/javascript" src="{{ jquery_loc }}"></script>
+
+<script type="text/javascript">
+/* <![CDATA[ */
+jQuery.fn.extend({
+    listitems: function (elem) {
+        return this.children("ul").children("li");
+    }
+});
+
+$(document).ready(function() {
+    $("li.month").hide();
+    $("li.month").listitems().hide();
+
+    $("li.year > span, li.month > span").replaceWith(function () {
+        var a = $(document.createElement("a"));
+        a.append($(this).contents());
+        a.attr("href", "javascript: void(0);");
+        return a;
+    });
+
+    var p = $("li.year:nth-child(2)");
+    p.addClass("default_open");
+    p.listitems().show();
+
+    var i = p.listitems().first();
+    i.listitems().show();
+
+    $("li.year > a, li.month > a").click(function () {
+        var t = $(this).parent();
+        console.log([this, self, t]);
+
+        if (t.hasClass("default_open")) {
+            i.listitems().hide();
+            p.removeClass("default_open");
+        }
+
+        t.listitems().toggle();
+        t.listitems().listitems().hide();
+    });
+});
+/* ]]> */
+</script>
+
+  </head>
+  <body>
+
+<div id="title">zeusbot</div>
+
+<div id="page">
+  <p>
+    Herein lie the raw logs from zeusbot (#highaltitude on irc.freenode.net),
+    and pisg statistics. Tread carefully.
+  </p>
+
+  <ul>
+    <li><a href="pisg.html">pisg stats</a></li>
+
+    {% for year in years %}
+    <li class='year'>
+      <span>{{ year.year }}</span>
+      <ul>
+        {% for month in year.months %}
+        <li class='month'>
+          <span>{{ month.month_nice }}</span>
+          <ul>
+            {% for logfile in month.files %}
+            <li>
+              {% if logfile.is_today %}
+                <a href='{{ logs_dir }}/{{ logfile.filename }}'>{{ logfile.date_nice }}</a>
+                <span class="small">(raw only)</span>
+              {% else %}
+                <a href='{{ highlighted_dir }}/{{ logfile.filename }}.html'>{{ logfile.date_nice }}</a>
+                <span class="small"><a href='{{ logs_dir }}/{{ logfile.filename }}'>(raw text)</a></span>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </li>
+        {% endfor %}
+      </ul>
+    </li>
+    {% endfor %}
+  </ul>
+
+  <p>
+    <a href='http://habhub.org/'>habhub.org</a>
+  </p>
+</div>
+
+  </body>
+</html>

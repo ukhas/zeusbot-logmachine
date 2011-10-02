@@ -1,0 +1,3 @@
+@reboot eggdrop eggdrop.conf
+21 3 * * * pisg --silent
+25 3 * * * make -sC www

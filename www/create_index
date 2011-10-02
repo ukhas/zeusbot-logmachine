@@ -1,0 +1,80 @@
+#!/usr/bin/env python
+
+import sys
+import re
+import os
+import datetime
+import calendar
+import jinja2
+
+config = {
+    "logs_dir": "logs",
+    "highlighted_dir": "logs_highlighted",
+    "log_match": re.compile("^highaltitude\\.log\\.(?P<year>[0-9]{4})" +
+                            "(?P<month>[0-9]{2})(?P<day>[0-9]{2})$"),
+    "jquery_loc": "https://ajax.googleapis.com/ajax/libs/jquery/" +
+                        "1.5.2/jquery.min.js",
+    "stylesheet": "/simple.css",
+    "template": "index.template.html"
+}
+
+class LogYear(object):
+    def __init__(self, year):
+        self.year = year
+        self.months = []
+
+class LogMonth(object):
+    def __init__(self, month):
+        self.month = month
+        self.files = []
+        self.month_nice = calendar.month_abbr[month]
+
+class LogFile(object):
+    def __init__(self, date, filename):
+        self.date = date
+        self.filename = filename
+        self.date_nice = date.strftime("%A, %d-%B-%Y")
+        self.is_today = (date == datetime.date.today())
+
+def files():
+    for filename in os.listdir(config["logs_dir"]):
+        match = config["log_match"].match(filename)
+        if match:
+            groups = match.groupdict()
+            for key in groups:
+                groups[key] = int(groups[key])
+            date = datetime.date(**groups)
+            yield LogFile(date, filename)
+
+def grouped_files(files):
+    years = []
+    current = [None, None]
+
+    for logfile in sorted(files, key=lambda x: x.date, reverse=True):
+        if not current[0] or current[0].year != logfile.date.year:
+            current[0] = LogYear(logfile.date.year)
+            years.append(current[0])
+            current[1] = None
+        if not current[1] or current[1].month != logfile.date.month:
+            current[1] = LogMonth(logfile.date.month)
+            current[0].months.append(current[1])
+        current[1].files.append(logfile)
+
+    return years
+
+def gen_homepage():
+    with open(config["template"]) as t:
+        homepage_template = jinja2.Template(t.read())
+    context = config.copy()
+    context["years"] = grouped_files(files())
+    content = homepage_template.render(context)
+    content = re.sub("\n( *)\n", "\n", content) # Remove blank lines
+    return content
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print "Usage: {0} <output>\n".format(sys.argv[0])
+        sys.exit(1)
+
+    with open(sys.argv[1], "w") as f_out:
+        f_out.write(gen_homepage())
