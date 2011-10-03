@@ -1,0 +1,28 @@
+/* Copyright 2011 (C) Daniel Richman. License: GNU GPL 3 */
+
+#filename
+{
+    font-size: 3em;
+    color: #000088;
+    text-align: center;
+}
+
+#filename, #rawlink { font-family: sans-serif; }
+#rawlink { font-size: 0.8em; }
+#log     { font-family: monospace; }
+.line    { white-space: pre-wrap; }
+.action  { font-weight: bold; }
+.nick    { font-weight: bold; }
+.host    { color: #888; }
+.thing   { color: #555; }
+.unknown { color: #333; }
+
+/* from solarised https://github.com/altercation/solarized MIT License */
+.term_2  { color: #dc322f; }
+.term_3  { color: #859900; }
+.term_4  { color: #b58900; }
+.term_5  { color: #268bd2; }
+.term_6  { color: #d33682; }
+.term_7  { color: #2aa198; }
+.term_9  { color: #002b36; }
+.term_10 { color: #cb4b16; }

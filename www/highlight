@@ -1,13 +1,217 @@
 #!/usr/bin/env python
+# Copyright 2011 (C) Daniel Richman. License: GNU GPL 3
+
+# Message types:
+# [hh:mm] <nick> message
+# [hh:mm] Action: nick action
+# [hh:mm] Nick change: nick -> nick
+# [hh:mm] nick (user@host) (some join, part, netsplit, etc message)
+# [hh:mm] anything else (mode change, topic, blah)
 
 import sys
+import os
+import calendar
+import datetime
+import traceback
 from xml.sax.saxutils import escape
+import jinja2
 
-if len(sys.argv) != 3:
-    print "Usage: {0} <input> <output>\n".format(sys.argv[0])
-    sys.exit(1)
+config = {
+    "template": "highlight.template.html",
+    "stylesheet": "../highlight.css",
+    "raw_dir": "../logs"
+}
 
-with open(sys.argv[1]) as f_in:
-    with open(sys.argv[2], "w") as f_out:
-        f_out.write("<html><body><pre>" + escape(f_in.read()) +
-                        "</pre></body></html>")
+class Line(object):
+    nick_brockets = False
+
+    def html_part(self, name, text=None, csscls=None):
+        if text == None:
+            text = getattr(self, name)
+        return u"<span class='{name}'>{text}</span>".format(
+            name=name, text=escape(text))
+
+    def html_nick(self, nick=None):
+        if nick == None:
+            nick = self.nick
+        fmt = u"{left}<span class='nick term_{colour}'>{nick}</span>{right}"
+        if self.nick_brockets:
+            args = {"left": escape('<'), "right": escape('>')}
+        else:
+            args = {"left": '', "right": ''}
+        args["colour"] = self.nick_colour(nick)
+        args["nick"] = escape(nick)
+        return fmt.format(**args)
+
+    def nick_colour(self, nick):
+        # This is taken from irssi script nick_color.pl,
+        # by Timo Sirainen & Ian Peters; Public Domain
+        allowed_terminal_colours = [2, 3, 4, 5, 6, 7, 9, 10, 2, 3, 4]
+        return allowed_terminal_colours[sum(map(ord, nick)) % 11]
+
+class ChatLine(Line):
+    nick_brockets = True
+
+    def __init__(self, time, nick, message):
+        self.time = time
+        self.nick = nick
+        self.message = message
+
+    def __unicode__(self):
+        return u"{time} {nick} <span class='message'>{message}</span>".format(
+            time=self.html_part("time"),
+            nick=self.html_nick(),
+            message=self.html_part("message"))
+
+class ActionLine(Line):
+    def __init__(self, time, nick, action):
+        self.time = time
+        self.nick = nick
+        self.action = action
+
+    def __unicode__(self):
+        return u"{time} {ltyp} {nick} {action}".format(
+            time=self.html_part("time"),
+            ltyp=self.html_part("line_type", "Action:"),
+            nick=self.html_nick(),
+            action=self.html_part("action"))
+
+class NickChangeLine(Line):
+    def __init__(self, time, nick_before, nick_after):
+        self.time = time
+        self.nick_before = nick_before
+        self.nick_after = nick_after
+
+    def __unicode__(self):
+        return u"{time} {ltyp} <span class='nick_change'>{nick_before} " \
+               "{thing} {nick_after}</span>".format(
+            time=self.html_part("time"),
+            ltyp=self.html_part("line_type", "Nick change:"),
+            nick_before=self.html_nick(self.nick_before),
+            nick_after=self.html_nick(self.nick_after),
+            thing=escape("->"))
+
+class UnknownTimeLine(Line):
+    def __init__(self, time, text):
+        self.time = time
+        self.text = text
+    def __unicode__(self):
+        return self.html_part("time") + " " + \
+                self.html_part("unknown", self.text)
+
+class UnknownLine(Line):
+    def __init__(self, text):
+        self.text = text
+    def __unicode__(self):
+        return self.html_part("unknown", self.text)
+
+class UserStatusLine(Line):
+    def __init__(self, time, nick, host, thing):
+        self.time = time
+        self.nick = nick
+        self.host = host
+        self.thing = thing
+
+    def __unicode__(self):
+        return u"{time} {nick} {host} {thing}".format(
+                    time=self.html_part("time"),
+                    nick=self.html_nick(),
+                    host=self.html_part("host"),
+                    thing=self.html_part("thing"))
+
+def split_time(text):
+    (time, sep, text) = text.partition(" ")
+    assert sep == ' '
+    return (time, text)
+
+def split_nick(text):
+    text = text[1:]
+    (nick, sep, message) = text.partition("> ")
+    assert sep == "> " and nick
+    assert " " not in nick
+    return (nick, message)
+
+def split_action(text):
+    text = text[len("Action: "):]
+    (nick, sep, action) = text.partition(" ")
+    assert nick
+    return (nick, action)
+
+def split_nickchange(text):
+    text = text[len("Nick change: "):]
+    (nick_before, nick_after) = text.split(" -> ")
+    assert " " not in nick_before and " " not in nick_after
+    assert nick_before and nick_after
+    return (nick_before, nick_after)
+
+def check_dateline(text):
+    text = text[4:]
+    (day, month, dd, yyyy) = text.split()
+    day = list(calendar.day_abbr).index(day)
+    month = list(calendar.month_abbr).index(month)
+    dd = int(dd)
+    yyyy = int(yyyy)
+    assert datetime.date(yyyy, month, dd).weekday() == day
+
+def split_userstatus(text):
+    (nick, sep, text) = text.partition(" ")
+    assert nick and sep == " "
+    (host, sep, thing) = text.partition(" ")
+    assert host and host.startswith("(") and host.endswith(")") and sep == " "
+    return (nick, host, thing)
+
+def parse(text):
+    try:
+        (time, text) = split_time(text)
+    except:
+        return UnknownLine(text)
+
+    try:
+        if text.startswith("<"):
+            (nick, message) = split_nick(text)
+            return ChatLine(time, nick, message)
+        elif text.startswith("Action: "):
+            (nick, action) = split_action(text)
+            return ActionLine(time, nick, action)
+        elif text.startswith("Nick change: "):
+            (nick_before, nick_after) = split_nickchange(text)
+            return NickChangeLine(time, nick_before, nick_after)
+        elif text.find(" ") == text.find(" ("):
+            (nick, host, thing) = split_userstatus(text)
+            return UserStatusLine(time, nick, host, thing)
+    except:
+        pass
+
+    return UnknownTimeLine(time, text)
+
+def try_unicode(text):
+    for enc in ["ascii", "utf8", "iso-8859-1", "windows-1252"]:
+        try:
+            return unicode(text, enc)
+        except:
+            pass
+
+    return unicode(text, "ascii", "ignore")
+
+def parse_file(f):
+    for line in f:
+        assert line.endswith("\n")
+        line = try_unicode(line[:-1])
+        yield unicode(parse(line))
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print "Usage: {0} <input> <output>\n".format(sys.argv[0])
+        sys.exit(1)
+
+    with open(config["template"]) as t:
+        template = jinja2.Template(t.read())
+
+    context = config.copy()
+    context["filename"] = os.path.basename(sys.argv[1])
+
+    with open(sys.argv[1], "r") as f_in:
+        context["lines"] = parse_file(f_in)
+        with open(sys.argv[2], "w") as f_out:
+            for part in template.generate(context):
+                f_out.write(part.encode("utf-8"))
