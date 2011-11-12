@@ -28,7 +28,7 @@ $(document).ready(function() {
         return a;
     });
 
-    var p = $("li.year:nth-child(2)");
+    var p = $("li.year:nth-child(3)");
     p.addClass("default_open");
     p.listitems().show();
 
@@ -63,6 +63,7 @@ $(document).ready(function() {
 
   <ul>
     <li><a href="pisg.html">pisg stats</a></li>
+    <li><a href="search.html">Search the logs</a></li>
 
     {% for year in years %}
     <li class='year'>

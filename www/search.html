@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+  <head>
+    <title>zeusbot</title>
+    <link href="/simple.css" rel="stylesheet" type="text/css" />
+
+    <script src="http://www.google.co.uk/jsapi" type="text/javascript"></script>
+    <link rel="stylesheet" href="http://www.google.com/cse/style/look/default.css" type="text/css" />
+  </head>
+  <body>
+
+<div id="title">zeusbot log search</div>
+
+<div id="page">
+  <div id="cse" style="width: 100%;">Loading</div>
+  <script type="text/javascript"> 
+    google.load('search', '1', {language : 'en', style : google.loader.themes.GREENSKY});
+    google.setOnLoadCallback(function() {
+      var customSearchControl = new google.search.CustomSearchControl('your-id-here');
+      customSearchControl.setResultSetSize(google.search.Search.FILTERED_CSE_RESULTSET);
+      customSearchControl.draw('cse');
+    }, true);
+  </script>
+</div>
+
+  </body>
+</html>
