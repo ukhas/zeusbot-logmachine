@@ -16,6 +16,9 @@
 .host    { color: #888; }
 .thing   { color: #555; }
 .unknown { color: #333; }
+a.time:link    { color: #000; text-decoration: none; }
+a.time:visited { color: #000; text-decoration: none; }
+a.time:hover   { color: #000; text-decoration: underline; }
 
 /* from solarised https://github.com/altercation/solarized MIT License */
 .term_2  { color: #dc322f; }

@@ -25,6 +25,11 @@ config = {
 class Line(object):
     nick_brockets = False
 
+    def html_time(self):
+        tag = u"L{lineno}".format(lineno=self.lineno)
+        return u'<a class="time" name="{tag}" href="#{tag}">{time}</a>'.format(
+            tag=escape(tag), time=escape(self.time))
+
     def html_part(self, name, text=None, csscls=None):
         if text == None:
             text = getattr(self, name)
@@ -52,32 +57,35 @@ class Line(object):
 class ChatLine(Line):
     nick_brockets = True
 
-    def __init__(self, time, nick, message):
+    def __init__(self, lineno, time, nick, message):
+        self.lineno = lineno
         self.time = time
         self.nick = nick
         self.message = message
 
     def __unicode__(self):
         return u"{time} {nick} <span class='message'>{message}</span>".format(
-            time=self.html_part("time"),
+            time=self.html_time(),
             nick=self.html_nick(),
             message=self.html_part("message"))
 
 class ActionLine(Line):
-    def __init__(self, time, nick, action):
+    def __init__(self, lineno, time, nick, action):
+        self.lineno = lineno
         self.time = time
         self.nick = nick
         self.action = action
 
     def __unicode__(self):
         return u"{time} {ltyp} {nick} {action}".format(
-            time=self.html_part("time"),
+            time=self.html_time(),
             ltyp=self.html_part("line_type", "Action:"),
             nick=self.html_nick(),
             action=self.html_part("action"))
 
 class NickChangeLine(Line):
-    def __init__(self, time, nick_before, nick_after):
+    def __init__(self, lineno, time, nick_before, nick_after):
+        self.lineno = lineno
         self.time = time
         self.nick_before = nick_before
         self.nick_after = nick_after
@@ -85,18 +93,19 @@ class NickChangeLine(Line):
     def __unicode__(self):
         return u"{time} {ltyp} <span class='nick_change'>{nick_before} " \
                "{thing} {nick_after}</span>".format(
-            time=self.html_part("time"),
+            time=self.html_time(),
             ltyp=self.html_part("line_type", "Nick change:"),
             nick_before=self.html_nick(self.nick_before),
             nick_after=self.html_nick(self.nick_after),
             thing=escape("->"))
 
 class UnknownTimeLine(Line):
-    def __init__(self, time, text):
+    def __init__(self, lineno, time, text):
+        self.lineno = lineno
         self.time = time
         self.text = text
     def __unicode__(self):
-        return self.html_part("time") + " " + \
+        return self.html_time() + " " + \
                 self.html_part("unknown", self.text)
 
 class UnknownLine(Line):
@@ -106,7 +115,8 @@ class UnknownLine(Line):
         return self.html_part("unknown", self.text)
 
 class UserStatusLine(Line):
-    def __init__(self, time, nick, host, thing):
+    def __init__(self, lineno, time, nick, host, thing):
+        self.lineno = lineno
         self.time = time
         self.nick = nick
         self.host = host
@@ -114,7 +124,7 @@ class UserStatusLine(Line):
 
     def __unicode__(self):
         return u"{time} {nick} {host} {thing}".format(
-                    time=self.html_part("time"),
+                    time=self.html_time(),
                     nick=self.html_nick(),
                     host=self.html_part("host"),
                     thing=self.html_part("thing"))
@@ -160,7 +170,7 @@ def split_userstatus(text):
     assert host and host.startswith("(") and host.endswith(")") and sep == " "
     return (nick, host, thing)
 
-def parse(text):
+def parse(lineno, text):
     try:
         (time, text) = split_time(text)
     except:
@@ -169,20 +179,20 @@ def parse(text):
     try:
         if text.startswith("<"):
             (nick, message) = split_nick(text)
-            return ChatLine(time, nick, message)
+            return ChatLine(lineno, time, nick, message)
         elif text.startswith("Action: "):
             (nick, action) = split_action(text)
-            return ActionLine(time, nick, action)
+            return ActionLine(lineno, time, nick, action)
         elif text.startswith("Nick change: "):
             (nick_before, nick_after) = split_nickchange(text)
-            return NickChangeLine(time, nick_before, nick_after)
+            return NickChangeLine(lineno, time, nick_before, nick_after)
         elif text.find(" ") == text.find(" ("):
             (nick, host, thing) = split_userstatus(text)
-            return UserStatusLine(time, nick, host, thing)
+            return UserStatusLine(lineno, time, nick, host, thing)
     except:
         pass
 
-    return UnknownTimeLine(time, text)
+    return UnknownTimeLine(lineno, time, text)
 
 def try_unicode(text):
     for enc in ["ascii", "utf8", "iso-8859-1", "windows-1252"]:
@@ -194,10 +204,10 @@ def try_unicode(text):
     return unicode(text, "ascii", "ignore")
 
 def parse_file(f):
-    for line in f:
+    for lineno, line in enumerate(f):
         assert line.endswith("\n")
         line = try_unicode(line[:-1])
-        yield unicode(parse(line))
+        yield unicode(parse(lineno, line))
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
