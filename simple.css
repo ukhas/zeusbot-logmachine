@@ -1,0 +1,30 @@
+body
+{
+    font-family: sans-serif;
+}
+
+#title
+{
+    font-size: 3em;
+    padding-top: 1em;
+    padding-bottom: 0.8em;
+    text-align: center;
+    color: #000088;
+}
+
+#page
+{
+    width: 80%;
+    margin: 0 auto;
+}
+
+.small
+{
+    font-size: 80%;
+}
+
+#footnote
+{
+    color: #888;
+    font-size: 80%;
+}

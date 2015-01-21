@@ -15,7 +15,7 @@ config = {
                             "(?P<month>[0-9]{2})(?P<day>[0-9]{2})$"),
     "jquery_loc": "https://ajax.googleapis.com/ajax/libs/jquery/" +
                         "1.5.2/jquery.min.js",
-    "stylesheet": "/simple.css",
+    "stylesheet": "simple.css",
     "template": "index.template.html"
 }
 
