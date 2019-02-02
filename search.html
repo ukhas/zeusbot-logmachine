@@ -11,18 +11,19 @@
   </head>
   <body>
 
+<script>
+(function() {
+  var cx = 'search-id';
+  var gcse = document.createElement('script'); gcse.type = 'text/javascript'; gcse.async = true;
+  gcse.src = 'https://cse.google.com/cse.js?cx=' + cx;
+  var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(gcse, s);
+})();
+</script>
+
 <div id="title">zeusbot log search</div>
 
 <div id="page">
-  <div id="cse" style="width: 100%;">Loading</div>
-  <script type="text/javascript"> 
-    google.load('search', '1', {language : 'en', style : google.loader.themes.GREENSKY});
-    google.setOnLoadCallback(function() {
-      var customSearchControl = new google.search.CustomSearchControl('your-id-here');
-      customSearchControl.setResultSetSize(google.search.Search.FILTERED_CSE_RESULTSET);
-      customSearchControl.draw('cse');
-    }, true);
-  </script>
+  <gcse:search></gcse:search>
 </div>
 
   </body>
